@@ -1,7 +1,10 @@
 using UnityEngine;
+using System;
 
 public class EntityStat : MonoBehaviour
 {
+    public static event Action<EntityStat> OnEntityDied;
+
     [Header("Health")]
     public int maxHP = 100;
     public int currentHP;
@@ -19,45 +22,67 @@ public class EntityStat : MonoBehaviour
     [Header("State")]
     public bool isDead;
 
+    [Header("Identity")]
+    public bool isPlayer; // CHECK THIS ON PLAYER ONLY
+
     private Animator anim;
+
     void Awake()
     {
         anim = GetComponent<Animator>();
         currentHP = maxHP;
-        healthbar.setMaxHealth(maxHP);
+
+        if (healthbar != null)
+        {
+            healthbar.setMaxHealth(maxHP);
+            healthbar.setHealth(currentHP);
+        }
     }
 
-    private void Update()
-    {
-        healthbar.setMaxHealth(maxHP);
-        healthbar.setHealth(currentHP);
-    }
     public void TakeDamage(int rawDamage)
     {
         if (isDead) return;
 
-        healthbar.Shake();
+        healthbar?.Shake();
+
         int finalDamage = Mathf.Max(rawDamage - defense, 1);
         currentHP -= finalDamage;
 
+        if (healthbar != null)
+            healthbar.setHealth(currentHP);
+
         if (currentHP <= 0)
-        { 
-            anim.SetTrigger("die");
+        {
             Die();
-        }              
+        }
     }
+
     public void Heal(int amount)
     {
         if (isDead) return;
 
         currentHP = Mathf.Min(currentHP + amount, maxHP);
+        healthbar?.setHealth(currentHP);
     }
+
     void Die()
     {
+        if (isDead) return;
+
         isDead = true;
-        healthbar.Shake();
-        GetComponent<Lootable>()?.DropLoot();
-        FindObjectOfType<LevelManager>()?.RegisterEnemyKill();
-        Object.Destroy(gameObject, 1f);
+
+        anim?.SetTrigger("die");
+
+        // Notify listeners (UI, managers)
+        OnEntityDied?.Invoke(this);
+
+        // Enemy-only logic
+        if (!isPlayer)
+        {
+            GetComponent<Lootable>()?.DropLoot();
+            FindObjectOfType<LevelManager>()?.RegisterEnemyKill();
+        }
+
+        Destroy(gameObject, 1f);
     }
 }

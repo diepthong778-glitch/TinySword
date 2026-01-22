@@ -13,6 +13,12 @@ public class PlayerMovement : MonoBehaviour
     private Camera cam;
     private EntityStat stats;
 
+    bool onStairs = false;
+    float stairSlope;
+    bool stairRightIsUp;
+
+
+
     private Vector2 input;
 
     public AudioClip footstepSound;
@@ -48,10 +54,24 @@ public class PlayerMovement : MonoBehaviour
 
     void Move()
     {
+        Vector2 moveDir = input;
+
+        if (onStairs)
+        {
+            float stairDir = stairRightIsUp ? 1f : -1f;
+
+            moveDir.y += input.x * stairSlope * stairDir;
+
+            moveDir.y += input.y * 0.5f;
+
+            moveDir = moveDir.normalized;
+        }
+
         rb.MovePosition(
-            rb.position + input * moveSpeed * moveMultiplier * Time.fixedDeltaTime
+            rb.position + moveDir * moveSpeed * moveMultiplier * Time.fixedDeltaTime
         );
     }
+
 
     void UpdateAnimation()
     {
@@ -86,5 +106,17 @@ public class PlayerMovement : MonoBehaviour
             GlobalSound.Instance?.PlaySound(footstepSound);
         else
             GlobalSound.Instance?.StopLoop(footstepSound);
+    }
+
+    public void EnterStairs(float slope, bool rightIsUp)
+    {
+        onStairs = true;
+        stairSlope = slope;
+        stairRightIsUp = rightIsUp;
+    }
+
+    public void ExitStairs()
+    {
+        onStairs = false;
     }
 }
